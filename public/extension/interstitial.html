@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Redirect Blocked - Calm Browsing Buddy</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #fef3c7, #fed7aa);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .container {
+      max-width: 600px;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+      padding: 40px;
+      text-align: center;
+    }
+    
+    .warning-icon {
+      width: 80px;
+      height: 80px;
+      background: #f59e0b;
+      border-radius: 50%;
+      margin: 0 auto 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+    }
+    
+    h1 {
+      color: #92400e;
+      margin: 0 0 16px 0;
+      font-size: 28px;
+      font-weight: 600;
+    }
+    
+    .subtitle {
+      color: #d97706;
+      font-size: 16px;
+      font-weight: 500;
+      margin-bottom: 24px;
+    }
+    
+    .description {
+      color: #374151;
+      font-size: 16px;
+      line-height: 1.6;
+      margin-bottom: 32px;
+    }
+    
+    .url-info {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 32px;
+      text-align: left;
+    }
+    
+    .url-label {
+      font-size: 14px;
+      font-weight: 500;
+      color: #6b7280;
+      margin-bottom: 8px;
+    }
+    
+    .url {
+      font-family: 'Monaco', 'Consolas', monospace;
+      font-size: 14px;
+      background: white;
+      padding: 12px;
+      border-radius: 4px;
+      border: 1px solid #d1d5db;
+      word-break: break-all;
+    }
+    
+    .actions {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+      display: inline-block;
+    }
+    
+    .btn-primary {
+      background: #3b82f6;
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background: #2563eb;
+    }
+    
+    .btn-danger {
+      background: #ef4444;
+      color: white;
+    }
+    
+    .btn-danger:hover {
+      background: #dc2626;
+    }
+    
+    .btn-secondary {
+      background: #6b7280;
+      color: white;
+    }
+    
+    .btn-secondary:hover {
+      background: #4b5563;
+    }
+    
+    .footer {
+      margin-top: 32px;
+      padding-top: 24px;
+      border-top: 1px solid #e5e7eb;
+      color: #6b7280;
+      font-size: 14px;
+    }
+    
+    .checkbox-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+    
+    input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+    }
+    
+    .checkbox-label {
+      font-size: 14px;
+      color: #374151;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="warning-icon">⚠️</div>
+    
+    <h1>Suspicious Redirect Blocked</h1>
+    <div class="subtitle">Calm Browsing Buddy detected a potentially malicious redirect</div>
+    
+    <div class="description">
+      This redirect was blocked because it may lead to malicious content, phishing sites, 
+      or unwanted downloads. Please review the destination carefully before proceeding.
+    </div>
+    
+    <div class="url-info">
+      <div class="url-label">Blocked Destination:</div>
+      <div class="url" id="blocked-url">Loading...</div>
+      
+      <div class="url-label" style="margin-top: 16px;">Original Page:</div>
+      <div class="url" id="from-url">Loading...</div>
+    </div>
+    
+    <div class="checkbox-container">
+      <input type="checkbox" id="trust-domain">
+      <label for="trust-domain" class="checkbox-label">
+        Trust this domain and allow future redirects
+      </label>
+    </div>
+    
+    <div class="actions">
+      <button class="btn btn-secondary" id="go-back">
+        ← Go Back
+      </button>
+      <button class="btn btn-danger" id="proceed">
+        Proceed Anyway
+      </button>
+    </div>
+    
+    <div class="footer">
+      Protected by Calm Browsing Buddy<br>
+      Your safety is our priority
+    </div>
+  </div>
+  
+  <script>
+    // Parse URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const blockedUrl = urlParams.get('blocked');
+    const fromUrl = urlParams.get('from');
+    
+    // Display URLs
+    document.getElementById('blocked-url').textContent = decodeURIComponent(blockedUrl || 'Unknown');
+    document.getElementById('from-url').textContent = decodeURIComponent(fromUrl || 'Unknown');
+    
+    // Handle actions
+    document.getElementById('go-back').addEventListener('click', () => {
+      if (fromUrl) {
+        window.location.href = fromUrl;
+      } else {
+        history.back();
+      }
+    });
+    
+    document.getElementById('proceed').addEventListener('click', () => {
+      const trustDomain = document.getElementById('trust-domain').checked;
+      
+      if (trustDomain && blockedUrl) {
+        // Add to whitelist
+        try {
+          const domain = new URL(blockedUrl).hostname;
+          chrome.runtime.sendMessage({
+            action: 'addToWhitelist',
+            domain: domain
+          });
+        } catch (e) {
+          console.error('Invalid URL:', e);
+        }
+      }
+      
+      // Proceed to blocked URL
+      if (blockedUrl) {
+        window.location.href = blockedUrl;
+      }
+    });
+    
+    // Auto-focus on go back button
+    document.getElementById('go-back').focus();
+  </script>
+</body>
+</html>
