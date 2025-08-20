@@ -29,12 +29,29 @@ class AdBlocker {
       // Social media ads
       '[data-testid*="ad"]', '[aria-label*="Sponsored"]',
       
-      // Video ads
-      '.video-ads', '.preroll-ads', '.midroll-ads',
-      
       // Banner positions
       '.top-banner', '.side-banner', '.bottom-banner',
       '.header-ad', '.footer-ad', '.sidebar-ad'
+    ];
+
+    // Video-specific ad selectors (more targeted)
+    this.videoAdSelectors = [
+      // Video ad overlays and companions
+      '.video-ads', '.preroll-ads', '.midroll-ads', '.postroll-ads',
+      '.ad-overlay', '.video-ad-overlay', '.player-ad-overlay',
+      '.companion-ad', '.video-companion-ad', '.player-companion',
+      
+      // Skip ad buttons and containers
+      '.skip-ad', '.video-skip-ad', '.ad-skip-button',
+      '.ad-countdown', '.ad-timer', '.ad-progress',
+      
+      // Video ad banners and notices
+      '.video-ad-banner', '.ad-notice', '.advertisement-notice',
+      '.sponsored-content-overlay', '.promoted-video-overlay',
+      
+      // Platform-specific video ads
+      '.ytp-ad-overlay-container', '.ytp-ad-text-overlay',
+      '.html5-video-ad-overlay', '.jwplayer-ad-overlay'
     ];
 
     // Attribute-based selectors
@@ -54,12 +71,12 @@ class AdBlocker {
   removeAds() {
     let removed = 0;
 
-    // Remove by selectors
+    // Remove regular ads (excluding video players)
     this.adSelectors.forEach(selector => {
       try {
         const elements = document.querySelectorAll(selector);
         elements.forEach(element => {
-          if (this.isValidAdElement(element)) {
+          if (this.isValidAdElement(element) && !this.isVideoPlayer(element)) {
             this.hideElement(element);
             removed++;
           }
@@ -69,11 +86,14 @@ class AdBlocker {
       }
     });
 
-    // Remove by attributes
+    // Handle video ads separately with targeted approach
+    removed += this.removeVideoAds();
+
+    // Remove by attributes (but protect video players)
     this.adAttributes.forEach(attr => {
       const elements = document.querySelectorAll(`[${attr}]`);
       elements.forEach(element => {
-        if (this.isValidAdElement(element)) {
+        if (this.isValidAdElement(element) && !this.isVideoPlayer(element)) {
           this.hideElement(element);
           removed++;
         }
@@ -90,6 +110,96 @@ class AdBlocker {
         count: removed 
       });
     }
+  }
+
+  removeVideoAds() {
+    let removed = 0;
+
+    // Target video ad overlays and companions specifically
+    this.videoAdSelectors.forEach(selector => {
+      try {
+        const elements = document.querySelectorAll(selector);
+        elements.forEach(element => {
+          if (this.isValidVideoAdElement(element)) {
+            this.hideElement(element);
+            removed++;
+          }
+        });
+      } catch (e) {
+        // Ignore invalid selectors
+      }
+    });
+
+    // Remove video ad iframes and embeds
+    const videoAdIframes = document.querySelectorAll('iframe[src*="ads"], iframe[src*="doubleclick"], iframe[src*="googlesyndication"]');
+    videoAdIframes.forEach(iframe => {
+      // Only remove if it's clearly an ad, not the main video
+      if (iframe.offsetWidth < 728 || iframe.offsetHeight < 300) {
+        this.hideElement(iframe);
+        removed++;
+      }
+    });
+
+    // Skip video ads by fast-forwarding (YouTube specific)
+    this.skipVideoAds();
+
+    return removed;
+  }
+
+  skipVideoAds() {
+    // YouTube specific ad skipping
+    const skipButton = document.querySelector('.ytp-ad-skip-button, .ytp-skip-ad-button');
+    if (skipButton && skipButton.offsetParent !== null) {
+      skipButton.click();
+    }
+
+    // Auto-skip after countdown
+    const adCountdown = document.querySelector('.ytp-ad-duration-remaining');
+    if (adCountdown) {
+      const video = document.querySelector('video');
+      if (video && !video.paused) {
+        // Fast forward through the ad
+        const adDuration = video.duration;
+        if (adDuration < 30) { // Only skip short ads automatically
+          video.currentTime = adDuration - 0.1;
+        }
+      }
+    }
+  }
+
+  isVideoPlayer(element) {
+    // Check if element is a video player
+    const videoSelectors = [
+      'video', '.video-player', '.player', '.video-container',
+      '.html5-video-player', '.jwplayer', '.flowplayer',
+      '[id*="player"]', '[class*="player"]'
+    ];
+
+    return videoSelectors.some(selector => {
+      return element.matches(selector) || element.querySelector(selector);
+    });
+  }
+
+  isValidVideoAdElement(element) {
+    // More specific validation for video ad elements
+    
+    // Don't remove actual video players
+    if (this.isVideoPlayer(element)) {
+      return false;
+    }
+
+    // Don't remove if it's the main video content
+    if (element.closest('video, .video-player, .player')) {
+      // But allow removal if it's clearly an overlay
+      return element.matches('.overlay, .ad-overlay, [class*="ad-"]');
+    }
+
+    // Don't remove if already hidden
+    if (element.style.display === 'none' || element.hidden) {
+      return false;
+    }
+
+    return true;
   }
 
   removeByContent() {
